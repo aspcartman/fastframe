@@ -10,6 +10,8 @@ use fastframe_fonts::{FontSetup, LocalFont, Weight};
 struct Specimen {
     frames: usize,
     capture: Option<std::path::PathBuf>,
+    /// Where the screenshot callback drops the captured frame.
+    shot: std::sync::Arc<std::sync::Mutex<Option<std::sync::Arc<egui::ColorImage>>>>,
     face: String,
 }
 
@@ -77,17 +79,10 @@ impl eframe::App for Specimen {
         });
         if let Some(path) = &self.capture {
             if self.frames == 4 {
-                ctx.send_viewport_cmd(egui::ViewportCommand::Screenshot(Default::default()));
+                let slot = std::sync::Arc::clone(&self.shot);
+                ctx.request_screenshot(move |image| *slot.lock().unwrap() = Some(image));
             }
-            let image = ctx.input(|input| {
-                input.events.iter().find_map(|event| {
-                    if let egui::Event::Screenshot { image, .. } = event {
-                        Some(image.clone())
-                    } else {
-                        None
-                    }
-                })
-            });
+            let image = self.shot.lock().unwrap().take();
             if let Some(image) = image {
                 let mut file = std::fs::File::create(path).expect("create screenshot");
                 write!(file, "P6\n{} {}\n255\n", image.width(), image.height())
@@ -132,6 +127,7 @@ fn main() -> eframe::Result {
             Ok(Box::new(Specimen {
                 frames: 0,
                 capture: std::env::var_os("FASTFRAME_CAPTURE").map(Into::into),
+                shot: Default::default(),
                 face,
             }))
         }),

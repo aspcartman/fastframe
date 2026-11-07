@@ -14,10 +14,8 @@ repository = "https://github.com/crmne/fastframe"
 homepage = "https://github.com/crmne/fastframe"
 
 [workspace.dependencies]
-# Stock egui 0.36.2 already has per-font hinting targets and sub-pixel
-# binning (emilk/egui#8262). Apps patch egui to their fork at the app root;
-# the fork is based on 0.36.2 and keeps the same API.
-egui = { version = "0.36.2", default-features = false }
+# Stock egui 0.37: rubber-band and kinetic scrolling live in egui itself.
+egui = { version = "0.37.0", default-features = false }
 # D-Bus for the desktop portal. Already in every app that talks to the
 # session bus; the tokio backend matches theirs, so no second executor.
 zbus = { version = "5.19", default-features = false, features = ["blocking-api", "tokio"] }
@@ -31,7 +29,7 @@ jiff = "0.2"
 # window and monitor positions off-screen recovery reads. eframe does not
 # compile on macOS without a renderer, so this names glow, which every app
 # uses.
-eframe = { version = "0.36.2", default-features = false, features = ["glow", "wayland", "x11"] }
+eframe = { version = "0.37.0", default-features = false, features = ["glow", "wayland", "x11"] }
 
 # The tray (fastframe-tray): the versions ZapFast and Spotifast build with.
 ksni = { version = "0.3", features = ["blocking"] }

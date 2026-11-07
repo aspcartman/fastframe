@@ -144,6 +144,8 @@ mod tests {
     fn static_bytes() -> Vec<u8> {
         egui::FontDefinitions::default().font_data["Ubuntu-Light"]
             .font
+            .as_ref()
+            .as_ref()
             .to_vec()
     }
     #[test]

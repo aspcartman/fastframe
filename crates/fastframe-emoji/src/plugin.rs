@@ -88,6 +88,7 @@ impl EmojiPlugin {
                     ClippedShape {
                         clip_rect: clipped.clip_rect,
                         shape: picture,
+                        transform_after_tessellation: clipped.transform_after_tessellation,
                     },
                 ));
             }
@@ -517,6 +518,7 @@ mod tests {
             .map(|galley| ClippedShape {
                 clip_rect: Rect::EVERYTHING,
                 shape: Shape::galley(Pos2::ZERO, galley.clone(), Color32::WHITE),
+                transform_after_tessellation: egui::emath::TSTransform::IDENTITY,
             })
             .collect();
         let mut lookup =
@@ -568,6 +570,7 @@ mod tests {
         let mut shapes = vec![ClippedShape {
             clip_rect: Rect::EVERYTHING,
             shape: Shape::galley(Pos2::ZERO, galley.clone(), Color32::WHITE),
+            transform_after_tessellation: egui::emath::TSTransform::IDENTITY,
         }];
         let mut lookup = |_: &str| None;
         plugin.colour(&mut shapes, &mut lookup);
@@ -608,6 +611,7 @@ mod tests {
             .map(|galley| ClippedShape {
                 clip_rect: Rect::EVERYTHING,
                 shape: Shape::galley(Pos2::ZERO, galley.expect("laid out"), Color32::WHITE),
+                transform_after_tessellation: egui::emath::TSTransform::IDENTITY,
             })
             .collect();
         let mut asked = Vec::new();
@@ -723,6 +727,7 @@ mod tests {
         let mut shapes = vec![ClippedShape {
             clip_rect: Rect::EVERYTHING,
             shape: Shape::Text(text),
+            transform_after_tessellation: egui::emath::TSTransform::IDENTITY,
         }];
         let mut lookup = |_: &str| Some(Some((TextureId::User(1), egui::vec2(72.0, 72.0))));
         plugin.colour(&mut shapes, &mut lookup);

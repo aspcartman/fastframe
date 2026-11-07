@@ -86,16 +86,15 @@ impl Reveal {
     }
 }
 
-/// Marks the screenshots this transition asked for.
-#[derive(Debug)]
-struct Marker;
+/// Where the screenshot callback drops the picture this transition asked for.
+type Slot = Arc<std::sync::Mutex<Option<Arc<egui::ColorImage>>>>;
 
 #[derive(Default)]
 enum State {
     #[default]
     Idle,
     /// A screenshot was asked for at this time.
-    Capturing { since: f64 },
+    Capturing { since: f64, slot: Slot },
     /// The old colours are being revealed away since `start`.
     Revealing { picture: TextureHandle, start: f64 },
 }
@@ -140,11 +139,17 @@ impl Transition {
         if matches!(self.state, State::Capturing { .. }) {
             return;
         }
-        ctx.send_viewport_cmd(egui::ViewportCommand::Screenshot(egui::UserData::new(
-            Marker,
-        )));
+        // egui 0.37 hands the picture to a callback; park it in a slot `holding` polls.
+        let slot = Slot::default();
+        let sink = Arc::clone(&slot);
+        ctx.request_screenshot(move |image| {
+            if let Ok(mut picture) = sink.lock() {
+                *picture = Some(image);
+            }
+        });
         self.state = State::Capturing {
             since: ctx.input(|input| input.time),
+            slot,
         };
         ctx.request_repaint();
     }
@@ -154,23 +159,10 @@ impl Transition {
     /// after a short wait without it, this returns `false` and the app
     /// applies its new colours.
     pub fn holding(&mut self, ctx: &Context) -> bool {
-        let State::Capturing { since } = self.state else {
+        let State::Capturing { since, ref slot } = self.state else {
             return false;
         };
-        let picture = ctx.input(|input| {
-            input.raw.events.iter().find_map(|event| match event {
-                egui::Event::Screenshot {
-                    user_data, image, ..
-                } if user_data
-                    .data
-                    .as_ref()
-                    .is_some_and(|data| data.downcast_ref::<Marker>().is_some()) =>
-                {
-                    Some(Arc::clone(image))
-                }
-                _ => None,
-            })
-        });
+        let picture = slot.lock().ok().and_then(|mut picture| picture.take());
         let now = ctx.input(|input| input.time);
         if let Some(image) = picture {
             let picture = ctx.load_texture(
@@ -473,23 +465,20 @@ mod tests {
             transition.begin(ui.ctx());
             assert!(transition.holding(ui.ctx()), "hold the old colours");
         });
-        let user_data = output.viewport_output[&egui::ViewportId::ROOT]
+        let callback = output.viewport_output[&egui::ViewportId::ROOT]
             .commands
             .iter()
             .find_map(|command| match command {
-                egui::ViewportCommand::Screenshot(user_data) => Some(user_data.clone()),
+                egui::ViewportCommand::Screenshot(callback) => Some(callback.clone()),
                 _ => None,
             })
             .expect("a screenshot is asked for");
         assert!(transition.active());
 
-        let screenshot = egui::Event::Screenshot {
-            viewport_id: egui::ViewportId::ROOT,
-            user_data,
-            image: Arc::new(egui::ColorImage::filled([4, 4], Color32::RED)),
-        };
+        // The integration completes the callback once the pixels are read.
+        callback.complete(Arc::new(egui::ColorImage::filled([4, 4], Color32::RED)));
         let mut held = None;
-        let output = frame(&ctx, 0.05, vec![screenshot], |ui| {
+        let output = frame(&ctx, 0.05, vec![], |ui| {
             held = Some(transition.holding(ui.ctx()));
             transition.paint(ui.ctx());
         });
