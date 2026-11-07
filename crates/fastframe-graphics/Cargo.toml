@@ -13,14 +13,14 @@ keywords = ["egui", "eframe", "opengl", "wgpu", "desktop"]
 categories = ["gui"]
 
 [features]
-## Retry with eframe's wgpu renderer when OpenGL cannot draw the window:
-## Direct3D 12 on Windows (WARP, Windows' own software renderer, without a
-## vendor driver), Metal on macOS, Vulkan or OpenGL ES on Linux. It adds wgpu
-## to the app's build, several megabytes, so each app chooses it.
-wgpu = ["eframe/wgpu"]
+## Retry with eframe's glow renderer when wgpu cannot draw the window. Off by
+## default so a build (macOS above all) carries no OpenGL.
+glow = ["eframe/glow"]
+## wgpu is always on now; kept so existing feature lists still resolve.
+wgpu = []
 
 [dependencies]
-# The renderer choice and the errors `run_native` returns. glow is the
+# The renderer choice and the errors `run_native` returns. wgpu is the
 # renderer every app uses; the workspace's eframe names it.
 eframe.workspace = true
 # One warning when the first renderer fails and the next is tried.

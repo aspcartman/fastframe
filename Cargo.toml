@@ -27,9 +27,10 @@ jiff = "0.2"
 
 # The keep-running shell (fastframe-shell). `Frame::winit_window`, for the
 # window and monitor positions off-screen recovery reads. eframe does not
-# compile on macOS without a renderer, so this names glow, which every app
-# uses.
-eframe = { version = "0.37.0", default-features = false, features = ["glow", "wayland", "x11"] }
+# compile on macOS without a renderer, so this names wgpu (Metal on macOS, no
+# OpenGL). Apps that still want glow as a fallback turn on
+# fastframe-graphics/glow.
+eframe = { version = "0.37.0", default-features = false, features = ["wgpu", "wayland", "x11"] }
 
 # The tray (fastframe-tray): the versions ZapFast and Spotifast build with.
 ksni = { version = "0.3", features = ["blocking"] }

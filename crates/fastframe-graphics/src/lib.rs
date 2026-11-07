@@ -8,10 +8,10 @@
 //! draws anything. An app started from Explorer has no console, so it seemed
 //! to quit without a word (Solco's Windows first-run test, 2026-10-27).
 //!
-//! [`Graphics::run_native`] opens the window with glow. When glow cannot draw
-//! it and the `wgpu` feature is on, it opens it again with wgpu, which on
-//! Windows draws through Direct3D 12 and, without a vendor driver, through
-//! WARP, Windows' own software renderer. When no renderer can draw, it shows
+//! [`Graphics::run_native`] opens the window with wgpu (Metal on macOS,
+//! Direct3D 12 and WARP on Windows, Vulkan on Linux). When wgpu cannot draw
+//! it and the `glow` feature is on, it opens it again with glow. When no
+//! renderer can draw, it shows
 //! a native dialog that names the cause and what to do, with a link to the
 //! app's help page, and returns the error.
 
@@ -32,12 +32,12 @@ use std::sync::{Arc, Mutex};
 
 pub use eframe::Renderer;
 
-/// The renderers [`Graphics::run_native`] tries, in order: glow, which every
-/// app has drawn with so far, then wgpu when the `wgpu` feature is on.
+/// The renderers [`Graphics::run_native`] tries, in order: wgpu (Metal,
+/// Direct3D 12, Vulkan), then glow when the `glow` feature is on.
 pub const RENDERERS: &[Renderer] = &[
-    Renderer::Glow,
-    #[cfg(feature = "wgpu")]
     Renderer::Wgpu,
+    #[cfg(feature = "glow")]
+    Renderer::Glow,
 ];
 
 /// The renderer that last opened a window in this process.
@@ -370,10 +370,10 @@ pub fn renderer() -> Option<Renderer> {
 /// errors are not.
 pub fn is_graphics_failure(error: &eframe::Error) -> bool {
     match error {
+        #[cfg(feature = "glow")]
         eframe::Error::Glutin(_)
         | eframe::Error::NoGlutinConfigs(..)
         | eframe::Error::OpenGL(_) => true,
-        #[cfg(feature = "wgpu")]
         eframe::Error::Wgpu(_) => true,
         _ => false,
     }
@@ -620,9 +620,9 @@ mod tests {
     }
 
     #[test]
-    fn glow_is_always_tried_first() {
-        assert_eq!(RENDERERS.first(), Some(&Renderer::Glow));
-        assert_eq!(RENDERERS.len(), if cfg!(feature = "wgpu") { 2 } else { 1 });
+    fn wgpu_is_always_tried_first() {
+        assert_eq!(RENDERERS.first(), Some(&Renderer::Wgpu));
+        assert_eq!(RENDERERS.len(), if cfg!(feature = "glow") { 2 } else { 1 });
     }
 
     fn trouble(cause: Cause, help_url: Option<&'static str>) -> Trouble<'static> {
